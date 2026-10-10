@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="600" viewBox="0 0 1180 600" font-family="DejaVu Sans,sans-serif">
+<rect width="1180" height="600" fill="#ffffff"/>
+<text x="40" y="26" font-size="15" font-weight="bold" fill="#111">TOP VIEW  (world X-Y, looking down)</text>
+<rect x="40" y="40" width="500" height="500" fill="#fafafa" stroke="#ccc"/>
+<text x="640" y="26" font-size="15" font-weight="bold" fill="#111">SIDE VIEW  (world X-Z, looking along -Y)</text>
+<rect x="640" y="40" width="500" height="500" fill="#fafafa" stroke="#ccc"/>
+<line x1="54.7" y1="40" x2="54.7" y2="540" stroke="#eee"/>
+<line x1="40" y1="525.3" x2="540" y2="525.3" stroke="#eee"/>
+<line x1="654.7" y1="40" x2="654.7" y2="540" stroke="#eee"/>
+<line x1="113.5" y1="40" x2="113.5" y2="540" stroke="#eee"/>
+<line x1="40" y1="466.5" x2="540" y2="466.5" stroke="#eee"/>
+<line x1="713.5" y1="40" x2="713.5" y2="540" stroke="#eee"/>
+<line x1="172.4" y1="40" x2="172.4" y2="540" stroke="#eee"/>
+<line x1="40" y1="407.6" x2="540" y2="407.6" stroke="#eee"/>
+<line x1="772.4" y1="40" x2="772.4" y2="540" stroke="#eee"/>
+<line x1="231.2" y1="40" x2="231.2" y2="540" stroke="#eee"/>
+<line x1="40" y1="348.8" x2="540" y2="348.8" stroke="#eee"/>
+<line x1="831.2" y1="40" x2="831.2" y2="540" stroke="#eee"/>
+<line x1="290.0" y1="40" x2="290.0" y2="540" stroke="#eee"/>
+<line x1="40" y1="290.0" x2="540" y2="290.0" stroke="#eee"/>
+<line x1="890.0" y1="40" x2="890.0" y2="540" stroke="#eee"/>
+<line x1="348.8" y1="40" x2="348.8" y2="540" stroke="#eee"/>
+<line x1="40" y1="231.2" x2="540" y2="231.2" stroke="#eee"/>
+<line x1="948.8" y1="40" x2="948.8" y2="540" stroke="#eee"/>
+<line x1="407.6" y1="40" x2="407.6" y2="540" stroke="#eee"/>
+<line x1="40" y1="172.4" x2="540" y2="172.4" stroke="#eee"/>
+<line x1="1007.6" y1="40" x2="1007.6" y2="540" stroke="#eee"/>
+<line x1="466.5" y1="40" x2="466.5" y2="540" stroke="#eee"/>
+<line x1="40" y1="113.5" x2="540" y2="113.5" stroke="#eee"/>
+<line x1="1066.5" y1="40" x2="1066.5" y2="540" stroke="#eee"/>
+<line x1="525.3" y1="40" x2="525.3" y2="540" stroke="#eee"/>
+<line x1="40" y1="54.7" x2="540" y2="54.7" stroke="#eee"/>
+<line x1="1125.3" y1="40" x2="1125.3" y2="540" stroke="#eee"/>
+<line x1="640" y1="515.0" x2="1140" y2="515.0" stroke="#eee"/>
+<text x="644" y="512.0" font-size="9" fill="#999">z=0</text>
+<line x1="640" y1="415.0" x2="1140" y2="415.0" stroke="#eee"/>
+<text x="644" y="412.0" font-size="9" fill="#999">z=0.2</text>
+<line x1="640" y1="315.0" x2="1140" y2="315.0" stroke="#eee"/>
+<text x="644" y="312.0" font-size="9" fill="#999">z=0.4</text>
+<line x1="640" y1="215.0" x2="1140" y2="215.0" stroke="#eee"/>
+<text x="644" y="212.0" font-size="9" fill="#999">z=0.6</text>
+<line x1="640" y1="115.0" x2="1140" y2="115.0" stroke="#eee"/>
+<text x="644" y="112.0" font-size="9" fill="#999">z=0.8</text>
+<line x1="290.0" y1="40" x2="290.0" y2="540" stroke="#bbb" stroke-dasharray="3,3"/>
+<line x1="40" y1="290.0" x2="540" y2="290.0" stroke="#bbb" stroke-dasharray="3,3"/>
+<line x1="640" y1="515.0" x2="1140" y2="515.0" stroke="#888"/>
+<circle cx="290.0" cy="290.0" r="200.9" fill="#2f6fd0" fill-opacity="0.05" stroke="#2f6fd0" stroke-dasharray="6,4"/>
+<text x="430.6" y="149.4" font-size="11" fill="#2f6fd0">reach R=0.683</text>
+<circle cx="890.0" cy="434.5" r="200.9" fill="#2f6fd0" fill-opacity="0.05" stroke="#2f6fd0" stroke-dasharray="6,4"/>
+<polygon points="228.2,395.9 445.9,395.9 445.9,204.7 228.2,204.7" fill="#e8622a" fill-opacity="0.22" stroke="#e8622a" stroke-width="2"/>
+<rect x="828.2" y="235.0" width="217.6" height="275.0" fill="#e8622a" fill-opacity="0.22" stroke="#e8622a" stroke-width="2"/>
+<polygon points="257.6,296.5 273.5,317.8 306.5,317.8 308.7,292.0 308.8,290.0 308.7,288.0 308.4,286.0 307.8,284.0 307.1,282.1 306.1,280.3 305.0,278.6 303.7,277.1 302.2,275.7 300.6,274.4 298.8,273.4 297.0,272.5 295.0,271.9 293.0,271.4 291.0,271.2 289.0,271.2 287.0,271.4 285.0,271.9 283.0,272.5 266.5,278.8 266.5,278.8 257.7,283.4 257.6,283.5" fill="#333" fill-opacity="0.75" stroke="#000" stroke-width="1.5"/>
+<rect x="857.6" y="485.5" width="51.2" height="29.5" fill="#333" fill-opacity="0.75" stroke="#000"/>
+<circle cx="290.0" cy="290.0" r="4" fill="#000"/>
+<text x="297.0" y="283.0" font-size="11" fill="#000">robot origin</text>
+<circle cx="890.0" cy="434.5" r="4" fill="#000"/>
+<text x="897.0" y="427.5" font-size="11" fill="#000">shoulder z=0.161</text>
+<circle cx="231.2" cy="392.9" r="5" fill="none" stroke="#c0139a" stroke-width="2.5"/>
+<text x="239.2" y="406.9" font-size="11" fill="#c0139a">mesh origin (corner!)</text>
+<text x="40" y="566" font-size="12" fill="#111"><tspan font-weight="bold" fill="#e8622a">■</tspan> KUBTEC_workspace_20cm at x=-0.20 y=-0.35 z=0.02 yaw=90°   <tspan font-weight="bold">■</tspan> robot base+J1   <tspan fill="#2f6fd0">- -</tspan> flange reach envelope</text>
+<text x="40" y="586" font-size="12" fill="#b3261e" font-weight="bold">Box encloses the robot origin: robot base sits INSIDE the workspace volume.</text>
+</svg>

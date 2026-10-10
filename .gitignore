@@ -1,0 +1,24 @@
+# ROS 2 and colcon build products
+**/build/
+**/install/
+**/log/
+**/.cache/
+
+# Python environments and local tooling
+.venv/
+**/.venv/
+**/.claude/
+**/__pycache__/
+*.py[cod]
+
+# Nested repository metadata is not part of the aggregate repository. The
+# original metadata is preserved locally as *.git-archive directories.
+**/.git/
+**/.git-archive/
+**/.git*
+
+# Editor and OS files
+.vscode/
+**/.vscode/
+*.swp
+.DS_Store
