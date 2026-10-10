@@ -1,17 +1,18 @@
 # FANUC CRX ROS 2 Workspace Archive
 
 This repository collects the FANUC CRX ROS 2 development work currently stored
-under one workspace. It includes the driver/robot-description source, the
-collision-based filtering and reachability experiments, and a parallel workspace
-snapshot retained for comparison.
+under one workspace. It includes the official driver and robot-description
+source, collision-based velocity filtering, MoveIt Servo integration,
+position/trajectory controllers, reachability tools, and historical workspace
+snapshots retained for comparison.
 
 ## Repository map
 
 | Folder | Role | Status |
 | --- | --- | --- |
-| `fanuc_cbf/` | Collision-based velocity filtering, MoveIt Servo integration, scene tools, jog/goal panels, and reachability studies for CRX-3iA | **Primary active development area** |
+| `fanuc_cbf/` | Active ROS 2 Jazzy workspace: official driver/description plus CBF, Servo, scene tools, panels, controllers, and reachability tools | **Primary active development area** |
 | `fanuc_crx_ros2/` | FANUC ROS 2 driver, hardware interface, robot descriptions, controllers, messages, and MoveIt configuration | **Driver foundation / upstream-derived source** |
-| `official_fanuc_ws/` | Parallel copy of the driver and scene-tool workspace with the same analysis outputs as `fanuc_cbf` | **Older or reference iteration; compare before editing** |
+| `official_fanuc_ws/` | Parallel source snapshot for historical comparison | **Older or reference iteration; compare before editing** |
 | `killer.sh` | Convenience script for stopping running ROS/Gazebo/RViz processes | Workspace utility |
 | `docs/` | Orientation and history notes for working with this aggregate repository | Documentation |
 
@@ -33,9 +34,10 @@ packages are under `src/`:
   Cartesian goal/jog panels, launch files, RViz configurations, and analysis
   utilities.
 
-The CSV, SVG, and HTML files at its root are reachability, workspace-boundary,
-placement, TCP, and orientation study outputs. The `run_*.sh` scripts are the
-quick entry points for the CRX-3iA simulation and panels.
+The `run_*.sh` scripts and `build_workspace.sh` are the quick entry points for
+the CRX-3iA simulation, panels, and reproducible build. Generated analysis
+results belong under an experiment-specific directory and are not kept at the
+workspace root.
 
 ### `fanuc_crx_ros2`
 
@@ -58,10 +60,10 @@ used for publishing this combined workspace.
 ### `official_fanuc_ws`
 
 This is a second workspace snapshot containing the driver/description source
-under `src/`, the scene launch scripts, and the same family of reachability
-artifacts found in `fanuc_cbf`. Treat it as reference material when tracing how
-an experiment evolved. Do not assume changes made in `fanuc_cbf` are present
-here, or vice versa.
+under `src/`. Its duplicated root-level analysis artifacts and run wrappers
+were removed; use `fanuc_cbf` for current builds and launch scripts. Treat
+this tree as reference material when tracing how an experiment evolved. Do not
+assume changes made in `fanuc_cbf` are present here, or vice versa.
 
 The detailed comparison guidance is in [`docs/REPOSITORY_MAP.md`](docs/REPOSITORY_MAP.md).
 
@@ -73,15 +75,16 @@ real FANUC controller is not required for the mock simulation workflows, but
 physical control requires the appropriate robot network configuration and
 hardware permissions.
 
-## Build
+## Build and run
 
 Source the ROS 2 installation, then build from the workspace that contains the
 packages you want to run. For the CBF workspace, for example:
 
 ```bash
 cd fanuc_cbf
-source /opt/ros/$ROS_DISTRO/setup.bash
-colcon build --symlink-install
+source /opt/ros/jazzy/setup.bash
+rosdep install --from-paths src --ignore-src -r -y
+./build_workspace.sh
 source install/setup.bash
 ```
 
@@ -108,10 +111,11 @@ From `fanuc_cbf` after building and sourcing its install space:
 ./run_jog_panel.sh
 ```
 
-Inspect the scripts before changing launch arguments; they document the
-intended package names and overlay order for this snapshot. The collision scene
-launch file exposes the detailed parameters for workspace meshes, TCP offsets,
-CBF filtering, Servo, and orthographic RViz views.
+The complete package, dependency, controller, collision-avoidance, and
+analysis-tool reference is in
+[`docs/WORKSPACE_GUIDE.md`](docs/WORKSPACE_GUIDE.md). The collision scene launch
+file exposes parameters for workspace meshes, TCP offsets, CBF filtering,
+Servo, panels, and orthographic RViz views.
 
 ## Safety
 

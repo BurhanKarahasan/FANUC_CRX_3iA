@@ -4,6 +4,15 @@
 **/log/
 **/.cache/
 
+# Generated analysis outputs. Recreate them with the commands in
+# docs/WORKSPACE_GUIDE.md rather than committing results at workspace roots.
+fanuc_cbf/*.csv
+fanuc_cbf/*.svg
+fanuc_cbf/*.html
+official_fanuc_ws/*.csv
+official_fanuc_ws/*.svg
+official_fanuc_ws/*.html
+
 # Python environments and local tooling
 .venv/
 **/.venv/

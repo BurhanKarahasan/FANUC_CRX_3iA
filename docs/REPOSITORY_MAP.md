@@ -31,9 +31,9 @@ messages. `official_fanuc_ws/src/` is useful for comparing the corresponding
 driver and description snapshot, but should not be edited casually because it
 duplicates source maintained elsewhere in this archive.
 
-## Repeated analysis outputs
+## Analysis outputs
 
-The two analysis-oriented workspaces contain similarly named outputs:
+Earlier iterations stored generated outputs at both workspace roots:
 
 - `reachability_*.csv`: sampled reachability results across boundary and
   orientation conditions.
@@ -45,10 +45,10 @@ The two analysis-oriented workspaces contain similarly named outputs:
 - matching `.svg` files: plotted visualizations of selected datasets.
 - `reach_study.html`: interactive or report-style reachability visualization.
 
-These are results, not package inputs. Keep them when they provide experiment
-history, but record the generating command and parameter set before replacing a
-file. Same-named files in `fanuc_cbf` and `official_fanuc_ws` may represent
-different runs even when their filenames match.
+These are results, not package inputs. The duplicate root-level copies have
+been removed from the repository. Generate new results under a dated
+experiment-specific directory and record the command, robot model, frame, TCP,
+and sampling parameters. See [`WORKSPACE_GUIDE.md`](WORKSPACE_GUIDE.md).
 
 ## Comparing iterations
 
@@ -81,5 +81,7 @@ the driver and launch dependencies.
    comparing an earlier configuration.
 4. Keep generated `build/`, `install/`, and `log/` directories local. They are
    reproducible outputs and are excluded by the root `.gitignore`.
-5. Add a short note beside new analysis outputs describing the command,
-   robot model, frame, TCP, and sampling parameters used to create them.
+5. Keep analysis output under an experiment-specific directory and record the
+   command, robot model, frame, TCP, and sampling parameters beside it. The
+   supported build and run workflow is documented in
+   [`WORKSPACE_GUIDE.md`](WORKSPACE_GUIDE.md).
