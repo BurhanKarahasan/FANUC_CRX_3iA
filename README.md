@@ -1,8 +1,32 @@
-# FANUC CRX-3iA Simulation and Collision Tools
+# FANUC CRX ROS 2 Workspace and CRX-3iA Simulation
 
-This workspace contains the CRX-3iA ROS 2 Jazzy simulation, MoveIt configuration, Cartesian goal/jog panels, collision-scene tools, tool meshes, TCP configuration, and an optional predictive CBF-style velocity filter.
+This repository contains the official FANUC ROS 2 driver and descriptions,
+the active CRX-3iA ROS 2 Jazzy simulation, MoveIt configuration, Cartesian
+goal/jog panels, collision-scene tools, tool meshes, TCP configuration, and an
+optional predictive CBF-style velocity filter.
 
-The workspace is intended to be copied as a complete directory. The source files and meshes are portable; `build/`, `install/`, and `log/` are generated locally and should be rebuilt on the new computer.
+The active ROS workspace is [`fanuc_cbf/`](fanuc_cbf/). The source files and
+meshes are portable; `build/`, `install/`, and `log/` are generated locally and
+should be rebuilt on the new computer. Commands in this document that invoke
+scripts or `ros2 run` are run from `fanuc_cbf/` unless stated otherwise.
+
+## Repository layout
+
+- `fanuc_cbf/`: active workspace and the single set of current build/run
+  scripts.
+- `fanuc_crx_ros2/`: earlier driver-oriented source snapshot retained for
+  comparison.
+- `official_fanuc_ws/`: historical/reference source snapshot retained for
+  comparison.
+- `killer.sh`: utility for stopping local ROS, Gazebo, and RViz processes.
+
+The active source tree combines the official FANUC repositories:
+
+- `fanuc_cbf/src/fanuc_driver/`: driver, hardware interface, controllers,
+  MoveIt configuration, messages, RMI examples, and libraries.
+- `fanuc_cbf/src/fanuc_description/`: official robot descriptions and meshes.
+- `fanuc_cbf/src/fanuc_scene_tools/`: collision scene, CBF, Servo, panels,
+  launch files, and reachability/placement tools.
 
 ## Contents
 
@@ -19,7 +43,10 @@ Important source locations:
 - `src/fanuc_scene_tools/assets/KUBTEC_workspace_20cm.stl`: larger workspace mesh for analysis tools.
 - `src/fanuc_scene_tools/assets/stepper_motor.stl`: attached tool/stepper collision mesh.
 
-The tool and collision objects are already included in the repository under `src/fanuc_scene_tools/assets/`. STL source dimensions are assumed to be millimetres and the default launch scale is `0.001`, converting them to metres.
+The tool and collision objects are already included in the repository under
+`fanuc_cbf/src/fanuc_scene_tools/assets/`. STL source dimensions are assumed
+to be millimetres and the default launch scale is `0.001`, converting them to
+metres.
 
 ## Prerequisites
 
@@ -51,7 +78,7 @@ Do not copy the old generated workspace state as a substitute for building. Copy
 From the workspace root:
 
 ```bash
-cd /path/to/fanuc_cbf
+cd /path/to/FANUC_CRX_3iA/fanuc_cbf
 source /opt/ros/jazzy/setup.bash
 ./build_workspace.sh
 source install/local_setup.bash
@@ -60,7 +87,7 @@ source install/local_setup.bash
 For a small source-only change:
 
 ```bash
-cd /path/to/fanuc_cbf
+cd /path/to/FANUC_CRX_3iA/fanuc_cbf
 source /opt/ros/jazzy/setup.bash
 colcon build --packages-select fanuc_scene_tools --symlink-install
 source install/local_setup.bash
@@ -75,7 +102,8 @@ colcon build --packages-select fanuc_scene_tools --symlink-install
 
 ## Main Collision Scene
 
-Run commands from the workspace root. The script is located at `run_crx3ia_collision_scene.sh`.
+Run commands from `fanuc_cbf/`. The script is located at
+`fanuc_cbf/run_crx3ia_collision_scene.sh`.
 
 Minimal scene with RViz and the workspace collision object:
 
@@ -133,11 +161,12 @@ A common CBF test command is:
 Run from the correct directory. For example:
 
 ```bash
-cd /path/to/fanuc_cbf
+cd /path/to/FANUC_CRX_3iA/fanuc_cbf
 ./run_crx3ia_collision_scene.sh ...
 ```
 
-Using `./run_crx3ia_collision_scene.sh` from `/home/user/FANUC` instead of `/home/user/FANUC/fanuc_cbf` gives `No such file or directory`.
+Using `./run_crx3ia_collision_scene.sh` from `/home/user/FANUC` instead of
+`/home/user/FANUC/fanuc_cbf` gives `No such file or directory`.
 
 ## Launch Arguments
 
@@ -299,7 +328,8 @@ The workspace mesh is treated as a solid object. A mesh that describes an occupi
 
 ## Servo Collision Scaling
 
-Current settings are in `src/fanuc_scene_tools/config/servo_crx3ia.yaml`:
+Current settings are in
+`fanuc_cbf/src/fanuc_scene_tools/config/servo_crx3ia.yaml`:
 
 ```yaml
 check_collisions: true
@@ -461,7 +491,8 @@ Typical status meanings:
 
 ## Reproducibility Checklist For A New Computer
 
-1. Copy the complete `fanuc_cbf` repository, including `src/fanuc_driver` and `src/fanuc_scene_tools/assets`.
+1. Copy the complete `fanuc_cbf` workspace, including `src/fanuc_driver` and
+   `src/fanuc_scene_tools/assets`.
 2. Install ROS 2 Jazzy, MoveIt, Xacro, TF2, and Tk dependencies.
 3. Run `source /opt/ros/jazzy/setup.bash`.
 4. Run `./build_workspace.sh` from the workspace root.
