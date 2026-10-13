@@ -241,8 +241,9 @@ All distances are metres and all roll/pitch/yaw values are radians.
 | `launch_servo` | `false` | Start MoveIt Servo and Cartesian jog panel |
 | `launch_joystick` | `false` | Start the direct pygame F710 Cartesian jog interface |
 | `launch_goal_panel` | `false` | Start Cartesian goal/IK/planning GUI |
-| `launch_cbf` | `true` | Route jog commands through the predictive filter |
-| `cbf_prediction_horizon` | `0.20` | CBF look-ahead time in seconds |
+| `launch_cbf` | `true` | Route jog commands through the direction-aware predictive filter |
+| `cbf_prediction_horizon` | `0.20` | Predictive-filter look-ahead time in seconds |
+| `servo_collision_checking` | `true` | Enable MoveIt Servo collision scaling and collision halt |
 | `launch_ortho_views` | `false` | Start XY, XZ, and YZ orthographic RViz views |
 
 ### Removing the Tool From Collision Checking
@@ -406,9 +407,12 @@ Other independent slowdown causes include:
 - Servo command timeout and latency;
 - the attached stepper mesh, even when the TCP itself appears clear.
 
-## Predictive CBF-Style Filter
+## Direction-Aware Predictive Filter
 
-The implementation in `cbf_velocity_filter.py` is a discrete predictive safety filter, not a formal signed-distance CBF-QP. The available MoveIt Python services return Boolean validity, not a signed collision distance and gradient.
+The implementation in `cbf_velocity_filter.py` is a discrete direction-aware
+predictive safety filter, not a formal signed-distance CBF-QP. The available
+MoveIt Python services return Boolean validity, not a signed collision distance,
+contact normal, or distance gradient.
 
 When enabled:
 
@@ -430,13 +434,26 @@ At 20 Hz it:
 6. Calls `/check_state_validity` for the IK solution.
 7. Sends the largest valid command fraction to Servo.
 
-The current candidate fractions are:
+If the previous command was limited and the next command reverses direction, the
+filter enters escape mode and tests the full-speed retreat candidate first. This
+prevents the custom filter from carrying a previous approach slowdown into an
+operator reversal. It does not override MoveIt Servo's own proximity scaling.
+
+The normal candidate fractions are:
 
 ```text
 1.00, 0.75, 0.50, 0.25, 0.00
 ```
 
-The filter is binary per candidate: a candidate is valid or invalid. It does not calculate a continuous distance-based scale. MoveIt Servo remains the independent final collision and singularity safeguard.
+Escape-mode candidate fractions are:
+
+```text
+1.00, 0.85, 0.70, 0.50, 0.25, 0.00
+```
+
+The filter is binary per candidate: a candidate is valid or invalid. It does not
+calculate a continuous distance-based scale or collision normal. MoveIt Servo
+remains the independent final collision and singularity safeguard.
 
 At `0.05 m/s`:
 
@@ -451,6 +468,24 @@ launch_cbf:=true cbf_prediction_horizon:=0.10
 ```
 
 Use `launch_cbf:=false` to isolate native Servo behavior.
+
+The Servo collision layer can be switched independently at launch:
+
+```bash
+# Custom direction-aware filter and native Servo collision checking
+launch_cbf:=true servo_collision_checking:=true
+
+# Custom filter bypassed; native Servo collision checking only
+launch_cbf:=false servo_collision_checking:=true
+
+# Custom filter only; Servo collision checking disabled for simulation diagnosis
+launch_cbf:=true servo_collision_checking:=false
+```
+
+The last mode is unsafe for a physical robot. `servo_collision_checking:=false`
+disables Servo's collision scaling and collision halt; it is intended only to
+isolate the custom filter in simulation. Singularity and command-timeout behavior
+remain Servo features and are not disabled by this switch.
 
 ## Velocity Scaling Summary
 

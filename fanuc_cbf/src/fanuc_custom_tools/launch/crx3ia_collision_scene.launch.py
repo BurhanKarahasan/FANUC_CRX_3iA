@@ -65,6 +65,11 @@ def servo_setup(context, *args, **kwargs):
         "config", "servo_crx3ia.yaml",
     )) as handle:
         servo_settings = yaml.safe_load(handle)
+    servo_settings["check_collisions"] = (
+        context.perform_substitution(
+            LaunchConfiguration("servo_collision_checking")
+        ) == "true"
+    )
 
     servo_node = Node(
         package="moveit_servo",
@@ -90,6 +95,7 @@ def servo_setup(context, *args, **kwargs):
                 "tcp_parent_link": LaunchConfiguration("tcp_parent_link"),
                 "tcp_offset": tcp_offset_param(),
                 "prediction_horizon": LaunchConfiguration("cbf_prediction_horizon"),
+                "escape_fractions": [1.0, 0.85, 0.70, 0.50, 0.25],
             }
         ],
         condition=IfCondition(LaunchConfiguration("launch_cbf")),
@@ -289,6 +295,7 @@ def generate_launch_description():
         DeclareLaunchArgument("launch_ortho_views", default_value="false"),
         DeclareLaunchArgument("launch_cbf", default_value="true"),
         DeclareLaunchArgument("cbf_prediction_horizon", default_value="0.20"),
+        DeclareLaunchArgument("servo_collision_checking", default_value="true"),
         moveit_launch,
         scene_publisher,
         tool_tcp_frame,

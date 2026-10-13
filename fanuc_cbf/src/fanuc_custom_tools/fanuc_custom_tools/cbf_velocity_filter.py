@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-"""Predictive discrete-CBF filter for Cartesian jog commands.
+"""Direction-aware predictive filter for Cartesian jog commands.
 
 MoveIt exposes collision validity as a Boolean ROS service rather than a signed
-distance field. This node therefore uses a discrete barrier: each commanded twist
-is rolled out over a short horizon and only the largest collision-free fraction is
-forwarded to MoveIt Servo. Servo keeps its native collision checker enabled as an
-independent final safety layer.
+distance field. This node therefore predicts several command magnitudes and forwards
+the largest collision-free candidate. When a previously limited command is reversed,
+the filter enters escape mode and tests a full-speed retreat first. MoveIt Servo
+remains an independently configurable final collision and singularity safety layer.
 """
 
 import math
@@ -52,8 +52,32 @@ def rotate_vector(quaternion, vector):
     return rotated[:3]
 
 
-class CbfVelocityFilter(Node):
-    """Project requested twists onto short-horizon collision-safe candidates."""
+def command_norm(twist):
+    return math.sqrt(sum(value * value for value in (
+        twist.linear.x, twist.linear.y, twist.linear.z,
+        twist.angular.x, twist.angular.y, twist.angular.z,
+    )))
+
+
+def command_dot(first, second):
+    return sum(left * right for left, right in zip(
+        (
+            first.linear.x, first.linear.y, first.linear.z,
+            first.angular.x, first.angular.y, first.angular.z,
+        ),
+        (
+            second.linear.x, second.linear.y, second.linear.z,
+            second.angular.x, second.angular.y, second.angular.z,
+        ),
+    ))
+
+
+class DirectionAwareVelocityFilter(Node):
+    """Project twists onto predictive collision-safe candidates.
+
+    The escape heuristic is deliberately based on command reversal rather than
+    pretending that a Boolean validity service supplies a collision gradient.
+    """
 
     def __init__(self):
         super().__init__("cbf_velocity_filter")
@@ -68,6 +92,9 @@ class CbfVelocityFilter(Node):
         self.declare_parameter("control_rate", 20.0)
         self.declare_parameter("command_timeout", 0.15)
         self.declare_parameter("fractions", [1.0, 0.75, 0.50, 0.25])
+        self.declare_parameter("escape_fractions", [1.0, 0.85, 0.70, 0.50, 0.25])
+        self.declare_parameter("reverse_threshold", 0.25)
+        self.declare_parameter("escape_after_fraction", 0.99)
 
         self.planning_frame = self.get_parameter("planning_frame").value
         self.tcp_link = self.get_parameter("tcp_link").value
@@ -76,12 +103,22 @@ class CbfVelocityFilter(Node):
         self.group_name = self.get_parameter("group_name").value
         self.horizon = float(self.get_parameter("prediction_horizon").value)
         self.fractions = [float(value) for value in self.get_parameter("fractions").value]
+        self.escape_fractions = [
+            float(value) for value in self.get_parameter("escape_fractions").value
+        ]
+        self.reverse_threshold = float(self.get_parameter("reverse_threshold").value)
+        self.escape_after_fraction = float(
+            self.get_parameter("escape_after_fraction").value
+        )
         self.joint_state = None
         self.latest_command = None
         self.latest_command_time = None
+        self.previous_command = None
+        self.last_output_fraction = 1.0
         self.candidates = []
         self.candidate_index = 0
         self.request_pending = False
+        self.escape_mode = False
 
         self.output = self.create_publisher(
             TwistStamped, self.get_parameter("output_topic").value, 10
@@ -104,7 +141,19 @@ class CbfVelocityFilter(Node):
         self.joint_state = message
 
     def _on_command(self, message):
+        if self.previous_command is not None:
+            previous_norm = command_norm(self.previous_command)
+            current_norm = command_norm(message.twist)
+            if previous_norm > 1e-9 and current_norm > 1e-9:
+                reversed_fraction = command_dot(
+                    self.previous_command, message.twist
+                ) / (previous_norm * current_norm)
+                self.escape_mode = (
+                    self.last_output_fraction < self.escape_after_fraction
+                    and reversed_fraction <= -self.reverse_threshold
+                )
         self.latest_command = message
+        self.previous_command = message.twist
         self.latest_command_time = self.get_clock().now()
 
     def _start_or_stop(self):
@@ -127,16 +176,17 @@ class CbfVelocityFilter(Node):
             self.get_logger().debug(f"Waiting for {self.planning_frame} -> {self.tcp_link}: {error}")
             self._publish_fraction(0.0)
             return
-        self.candidates = self._build_candidates(transform)
+        fractions = self.escape_fractions if self.escape_mode else self.fractions
+        self.candidates = self._build_candidates(transform, fractions)
         self.candidate_index = 0
         self._check_next_candidate()
 
-    def _build_candidates(self, transform):
+    def _build_candidates(self, transform, fractions):
         translation = transform.transform.translation
         orientation = transform.transform.rotation
         twist = self.latest_command.twist
         candidates = []
-        for fraction in self.fractions:
+        for fraction in fractions:
             duration = self.horizon * fraction
             rotation = rotation_quaternion(
                 twist.angular.x, twist.angular.y, twist.angular.z, duration
@@ -196,8 +246,15 @@ class CbfVelocityFilter(Node):
             self._check_next_candidate()
             return
         request = GetStateValidity.Request()
-        request.group_name = self.group_name
+        # Check the complete robot state, not only the manipulator group. The
+        # attached stepper is part of the planning scene and must be considered
+        # when validating the candidate flange pose.
+        request.group_name = ""
         request.robot_state = response.solution
+        # Merge the IK solution into move_group's current state. Without a diff,
+        # the request replaces the scene robot state and drops attached objects,
+        # making stepper/workspace contacts appear collision free.
+        request.robot_state.is_diff = True
         self.request_pending = True
         self.validity_client.call_async(request).add_done_callback(
             self._on_validity_response
@@ -220,6 +277,9 @@ class CbfVelocityFilter(Node):
     def _publish_fraction(self, fraction):
         if self.latest_command is None:
             return
+        self.last_output_fraction = fraction
+        if fraction >= self.escape_after_fraction:
+            self.escape_mode = False
         message = TwistStamped()
         message.header.stamp = self.get_clock().now().to_msg()
         message.header.frame_id = self.planning_frame
@@ -235,7 +295,7 @@ class CbfVelocityFilter(Node):
 
 def main():
     rclpy.init()
-    node = CbfVelocityFilter()
+    node = DirectionAwareVelocityFilter()
     try:
         rclpy.spin(node)
     finally:
