@@ -115,7 +115,33 @@ def servo_setup(context, *args, **kwargs):
         ],
         output="screen",
     )
-    return [servo_node, cbf_filter, jog_panel]
+    joystick_driver = Node(
+        package="joy",
+        executable="joy_node",
+        name="f710_joy",
+        parameters=[{"deadzone": 0.15, "autorepeat_rate": 50.0}],
+        condition=IfCondition(LaunchConfiguration("launch_joystick")),
+        output="screen",
+    )
+    joystick_jog = Node(
+        package="fanuc_custom_tools",
+        executable="joystick_jog",
+        parameters=[
+            {
+                "servo_node": "/servo_node",
+                "joy_topic": "/joy",
+                "planning_frame": LaunchConfiguration("goal_frame"),
+                "command_topic": PythonExpression([
+                    "'/cbf_velocity_filter/input' if '",
+                    LaunchConfiguration("launch_cbf"),
+                    "' == 'true' else '/servo_node/delta_twist_cmds'",
+                ]),
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration("launch_joystick")),
+        output="screen",
+    )
+    return [servo_node, cbf_filter, jog_panel, joystick_driver, joystick_jog]
 
 
 def ortho_views_setup(context, *args, **kwargs):
@@ -267,6 +293,7 @@ def generate_launch_description():
         DeclareLaunchArgument("tcp_yaw", default_value="0.0"),
         DeclareLaunchArgument("goal_frame", default_value="world"),
         DeclareLaunchArgument("launch_servo", default_value="false"),
+        DeclareLaunchArgument("launch_joystick", default_value="false"),
         DeclareLaunchArgument("launch_ortho_views", default_value="false"),
         DeclareLaunchArgument("launch_cbf", default_value="true"),
         DeclareLaunchArgument("cbf_prediction_horizon", default_value="0.20"),

@@ -43,6 +43,11 @@ install(PROGRAMS
   RENAME cartesian_jog_panel
 )
 install(PROGRAMS
+  fanuc_custom_tools/joystick_jog.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME joystick_jog
+)
+install(PROGRAMS
   fanuc_custom_tools/cbf_velocity_filter.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME cbf_velocity_filter

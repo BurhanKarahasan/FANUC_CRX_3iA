@@ -37,6 +37,7 @@ Important source locations:
 - `src/fanuc_custom_tools/fanuc_custom_tools/cbf_velocity_filter.py`: optional predictive collision filter.
 - `src/fanuc_custom_tools/fanuc_custom_tools/collision_scene_publisher.py`: workspace and attached-tool collision objects.
 - `src/fanuc_custom_tools/fanuc_custom_tools/cartesian_jog_panel.py`: hold-to-jog Cartesian and joint jog GUI.
+- `src/fanuc_custom_tools/fanuc_custom_tools/joystick_jog.py`: dead-man Logitech F710 interface for Cartesian jogging.
 - `src/fanuc_custom_tools/fanuc_custom_tools/cartesian_goal_panel.py`: TCP goal, IK, planning, execution, and scene GUI.
 - `src/fanuc_custom_tools/assets/KUBTEC_workspace_10cm.stl`: workspace collision/visualization mesh.
 - `src/fanuc_custom_tools/assets/KUBTEC_workspace_20cm.stl`: larger workspace mesh for analysis tools.
@@ -141,6 +142,38 @@ To use the CBF filter in the same scene, change only:
 launch_cbf:=true
 ```
 
+### Logitech F710 joystick jogging
+
+Install the ROS joystick driver before building:
+
+```bash
+sudo apt install ros-jazzy-joy
+```
+
+Start the scene with Servo and the joystick interface enabled:
+
+```bash
+./run_crx3ia_collision_scene.sh \
+  launch_servo:=true launch_joystick:=true launch_cbf:=true
+```
+
+The right shoulder button (RB, button 5 in the standard F710 layout) is a
+dead-man switch: the joystick publishes motion only while it is held. Releasing
+RB immediately publishes a zero twist and the Servo timeout is a second stop
+layer. The default mapping is:
+
+| Control | Motion |
+|---|---|
+| Left stick vertical/horizontal | X/Y translation |
+| Right stick vertical/horizontal | Y rotation/Z rotation |
+| D-pad vertical/horizontal | Z translation/X rotation |
+
+The F710 must be in the same input mode used when the scene is started. If the
+axes differ, inspect them with `ros2 topic echo /joy` and override the
+`axis_map` and `axis_invert` parameters on `joystick_jog`; the node refuses to
+produce non-zero motion for missing axes. Keep the dead-man requirement enabled
+when operating the real robot.
+
 A common CBF test command is:
 
 ```bash
@@ -189,6 +222,7 @@ All distances are metres and all roll/pitch/yaw values are radians.
 | `goal_frame` | `world` | Goal, twist, and CBF planning frame |
 | `goal_group` | `manipulator` | MoveIt planning group |
 | `launch_servo` | `false` | Start MoveIt Servo and Cartesian jog panel |
+| `launch_joystick` | `false` | Start `joy_node` and the F710 dead-man Cartesian jog interface |
 | `launch_goal_panel` | `false` | Start Cartesian goal/IK/planning GUI |
 | `launch_cbf` | `true` | Route jog commands through the predictive filter |
 | `cbf_prediction_horizon` | `0.20` | CBF look-ahead time in seconds |

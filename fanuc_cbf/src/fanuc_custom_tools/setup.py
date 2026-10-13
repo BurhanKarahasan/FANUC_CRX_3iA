@@ -22,6 +22,7 @@ setup(
         "console_scripts": [
             "collision_scene_publisher = fanuc_custom_tools.collision_scene_publisher:main",
             "workspace_boundary_sweep = fanuc_custom_tools.workspace_boundary_sweep:main",
+            "joystick_jog = fanuc_custom_tools.joystick_jog:main",
         ],
     },
 )
