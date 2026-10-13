@@ -102,7 +102,6 @@ def servo_setup(context, *args, **kwargs):
             {
                 "servo_node": "/servo_node",
                 "planning_frame": LaunchConfiguration("goal_frame"),
-                "controller_mode": LaunchConfiguration("joystick_mode"),
                 "command_topic": PythonExpression([
                     "'/cbf_velocity_filter/input' if '",
                     LaunchConfiguration("launch_cbf"),
@@ -287,7 +286,6 @@ def generate_launch_description():
         DeclareLaunchArgument("goal_frame", default_value="world"),
         DeclareLaunchArgument("launch_servo", default_value="false"),
         DeclareLaunchArgument("launch_joystick", default_value="false"),
-        DeclareLaunchArgument("joystick_mode", default_value="X"),
         DeclareLaunchArgument("launch_ortho_views", default_value="false"),
         DeclareLaunchArgument("launch_cbf", default_value="true"),
         DeclareLaunchArgument("cbf_prediction_horizon", default_value="0.20"),

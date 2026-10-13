@@ -3,6 +3,7 @@
 """Direct pygame F710 interface feeding the existing MoveIt Servo safety path."""
 
 import os
+import time
 
 import rclpy
 from geometry_msgs.msg import TwistStamped
@@ -31,18 +32,18 @@ class JoystickJog(Node):
         self.declare_parameter("command_topic", "/servo_node/delta_twist_cmds")
         self.declare_parameter("planning_frame", "world")
         self.declare_parameter("device_index", 0)
+        self.declare_parameter("device_name", "F710")
         self.declare_parameter("publish_rate", 50.0)
         self.declare_parameter("deadzone", 0.08)
         self.declare_parameter("linear_speed", 0.05)
         self.declare_parameter("angular_speed", 0.30)
-        self.declare_parameter("deadman_button", 5)
 
         self.frame = str(self.get_parameter("planning_frame").value)
         self.device_index = int(self.get_parameter("device_index").value)
+        self.device_name = str(self.get_parameter("device_name").value).lower()
         self.deadzone = float(self.get_parameter("deadzone").value)
         self.linear_speed = float(self.get_parameter("linear_speed").value)
         self.angular_speed = float(self.get_parameter("angular_speed").value)
-        self.deadman_button = int(self.get_parameter("deadman_button").value)
         self.publisher = self.create_publisher(
             TwistStamped, str(self.get_parameter("command_topic").value), 10
         )
@@ -55,9 +56,12 @@ class JoystickJog(Node):
         pygame.init()
         pygame.joystick.init()
         self.joystick = None
+        self.axis_profile = None
         self.twist_requested = False
         self.twist_ready = False
-        self.last_enabled = False
+        self.last_axes = None
+        self.last_buttons = None
+        self.last_service_report = 0.0
         self.last_report = 0.0
         self.create_timer(
             1.0 / float(self.get_parameter("publish_rate").value), self._poll
@@ -66,17 +70,44 @@ class JoystickJog(Node):
 
     def _connect(self):
         count = pygame.joystick.get_count()
-        if count <= self.device_index:
+        selected_index = None
+        for index in range(count):
+            joystick = pygame.joystick.Joystick(index)
+            name = joystick.get_name().lower()
+            if any(
+                alias in name
+                for alias in (self.device_name, "f710", "rumblepad")
+            ):
+                selected_index = index
+                break
+        if selected_index is None and count > self.device_index:
+            selected_index = self.device_index
+            fallback = pygame.joystick.Joystick(selected_index)
+            self.get_logger().warning(
+                f"Requested joystick '{self.device_name}' was not found; "
+                f"using device {selected_index}: {fallback.get_name()}"
+            )
+        if selected_index is None:
             self.joystick = None
             return False
         if self.joystick is None:
-            self.joystick = pygame.joystick.Joystick(self.device_index)
+            self.joystick = pygame.joystick.Joystick(selected_index)
             self.joystick.init()
+            self.axis_profile = (
+                "six_axis" if self.joystick.get_numaxes() >= 6 else "four_axis"
+            )
+            self.last_axes = [0.0] * self.joystick.get_numaxes()
+            self.last_buttons = [0] * self.joystick.get_numbuttons()
             self.get_logger().info(
                 f"Connected joystick {self.device_index}: {self.joystick.get_name()} "
                 f"({self.joystick.get_numaxes()} axes, "
                 f"{self.joystick.get_numbuttons()} buttons, "
                 f"{self.joystick.get_numhats()} hats)"
+            )
+            self.get_logger().info(
+                "Controls: left stick=linear X/Y, right stick=linear Z/yaw, "
+                + ("triggers=roll, " if self.axis_profile == "six_axis" else "")
+                + "D-pad=pitch."
             )
         return True
 
@@ -106,7 +137,16 @@ class JoystickJog(Node):
         self.publisher.publish(message)
 
     def _request_twist_mode(self):
-        if self.twist_requested or not self.switch_client.service_is_ready():
+        if self.twist_requested:
+            return
+        if not self.switch_client.service_is_ready():
+            now = time.monotonic()
+            if now - self.last_service_report > 2.0:
+                self.get_logger().warning(
+                    "Waiting for Servo switch_command_type service; "
+                    "joystick input is connected but motion is disabled."
+                )
+                self.last_service_report = now
             return
         self.twist_requested = True
         request = ServoCommandType.Request(
@@ -125,9 +165,12 @@ class JoystickJog(Node):
             return
         if not response.success:
             self.twist_requested = False
-            self.get_logger().error("Servo refused twist mode.")
+            self.get_logger().error(
+                f"Servo refused twist mode: {getattr(response, 'message', '')}"
+            )
             return
         self.twist_ready = True
+        self.get_logger().info("Servo twist mode enabled; joystick motion is active.")
         if self.pause_client.service_is_ready():
             self.pause_client.call_async(SetBool.Request(data=False))
 
@@ -135,20 +178,6 @@ class JoystickJog(Node):
         pygame.event.pump()
         if not self._connect():
             self._stop()
-            return
-
-        deadman = (
-            self.deadman_button < self.joystick.get_numbuttons()
-            and bool(self.joystick.get_button(self.deadman_button))
-        )
-        if not deadman:
-            self._stop()
-            return
-
-        self.last_enabled = True
-        self._request_twist_mode()
-        if not self.twist_ready:
-            self._publish_twist((0.0,) * 6)
             return
 
         left_x = self._axis(0)
@@ -161,21 +190,54 @@ class JoystickJog(Node):
         if self.joystick.get_numhats():
             dpad_x, dpad_y = self.joystick.get_hat(0)
 
+        axes = [left_x, left_y, right_x, right_y]
+        if self.axis_profile == "six_axis":
+            axes += [left_trigger, right_trigger]
+        buttons = [
+            self.joystick.get_button(index)
+            for index in range(self.joystick.get_numbuttons())
+        ]
+        if self.last_axes is not None:
+            for index, (old, new) in enumerate(zip(self.last_axes, axes)):
+                if abs(new - old) >= 0.1:
+                    self.get_logger().info(
+                        f"AXIS {index}: {old:+.2f} -> {new:+.2f}"
+                    )
+        if self.last_buttons is not None:
+            for index, (old, new) in enumerate(zip(self.last_buttons, buttons)):
+                if new != old:
+                    self.get_logger().info(
+                        f"BUTTON {index}: {'pressed' if new else 'released'}"
+                    )
+        self.last_axes = axes
+        self.last_buttons = buttons
+
+        self._request_twist_mode()
+        if not self.twist_ready:
+            self._publish_twist((0.0,) * 6)
+            return
+
         self._publish_twist(
             (
                 -left_y * self.linear_speed,
                 -left_x * self.linear_speed,
                 -right_y * self.linear_speed,
-                (right_trigger - left_trigger) * self.angular_speed,
+                (
+                    dpad_x
+                    + (
+                        (right_trigger - left_trigger)
+                        if self.axis_profile == "six_axis"
+                        else 0.0
+                    )
+                )
+                * self.angular_speed,
                 dpad_y * self.angular_speed,
                 -right_x * self.angular_speed,
             )
         )
 
     def _stop(self):
-        if self.last_enabled:
-            self._publish_twist((0.0,) * 6)
-        self.last_enabled = False
+        self._publish_twist((0.0,) * 6)
         self.twist_requested = False
         self.twist_ready = False
 

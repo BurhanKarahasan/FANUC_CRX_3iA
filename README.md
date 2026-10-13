@@ -37,7 +37,7 @@ Important source locations:
 - `src/fanuc_custom_tools/fanuc_custom_tools/cbf_velocity_filter.py`: optional predictive collision filter.
 - `src/fanuc_custom_tools/fanuc_custom_tools/collision_scene_publisher.py`: workspace and attached-tool collision objects.
 - `src/fanuc_custom_tools/fanuc_custom_tools/cartesian_jog_panel.py`: hold-to-jog Cartesian and joint jog GUI.
-- `src/fanuc_custom_tools/fanuc_custom_tools/joystick_jog.py`: dead-man Logitech F710 interface for Cartesian jogging.
+- `src/fanuc_custom_tools/fanuc_custom_tools/joystick_jog.py`: direct pygame Logitech F710 interface for Cartesian jogging.
 - `src/fanuc_custom_tools/fanuc_custom_tools/cartesian_goal_panel.py`: TCP goal, IK, planning, execution, and scene GUI.
 - `src/fanuc_custom_tools/assets/KUBTEC_workspace_10cm.stl`: workspace collision/visualization mesh.
 - `src/fanuc_custom_tools/assets/KUBTEC_workspace_20cm.stl`: larger workspace mesh for analysis tools.
@@ -157,10 +157,9 @@ Start the scene with Servo and the joystick interface enabled:
   launch_servo:=true launch_joystick:=true launch_cbf:=true
 ```
 
-The right shoulder button (RB, button 5 in the standard F710 layout) is a
-dead-man switch: the joystick publishes motion only while it is held. Releasing
-RB immediately publishes a zero twist and the Servo timeout is a second stop
-layer. The default mapping is:
+The direct pygame interface reads the F710 continuously. Servo's command
+timeout and the zero command on joystick disconnect provide the stop behavior.
+The default mapping is:
 
 | Control | Motion |
 |---|---|
@@ -168,18 +167,12 @@ layer. The default mapping is:
 | Right stick vertical/horizontal | Y rotation/Z rotation |
 | D-pad vertical/horizontal | Z translation/X rotation |
 
-The F710 must be in the same input mode used when the scene is started. The
-default is X mode. For D mode, add `joystick_mode:=D` to the launch command:
-
-```bash
-joystick_mode:=D
-```
-
-The X and D presets use the D-pad for Z translation and do not use the analog
-triggers as robot axes. If the driver exposes a different layout, inspect it
-with `ros2 topic echo /joy` and override `axis_map` and `axis_invert` on
-`joystick_jog`; the node refuses to produce non-zero motion for missing axes.
-Keep the dead-man requirement enabled when operating the real robot.
+The node selects a device whose name contains `F710` (and accepts the SDL
+name `RumblePad` used by some F710 receiver modes) instead of blindly taking
+device index 0. The mapping follows the known-working F710 layout: axes 0-3
+are the sticks, axes 4-5 are the triggers when exposed, and hat 0 is the
+D-pad. If the selected device exposes only four axes, trigger roll is disabled
+and the sticks plus D-pad remain available.
 
 ### Mapping an F710 before jogging
 
@@ -246,7 +239,7 @@ All distances are metres and all roll/pitch/yaw values are radians.
 | `goal_frame` | `world` | Goal, twist, and CBF planning frame |
 | `goal_group` | `manipulator` | MoveIt planning group |
 | `launch_servo` | `false` | Start MoveIt Servo and Cartesian jog panel |
-| `launch_joystick` | `false` | Start `joy_node` and the F710 dead-man Cartesian jog interface |
+| `launch_joystick` | `false` | Start the direct pygame F710 Cartesian jog interface |
 | `launch_goal_panel` | `false` | Start Cartesian goal/IK/planning GUI |
 | `launch_cbf` | `true` | Route jog commands through the predictive filter |
 | `cbf_prediction_horizon` | `0.20` | CBF look-ahead time in seconds |
