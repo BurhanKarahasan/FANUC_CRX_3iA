@@ -144,10 +144,10 @@ launch_cbf:=true
 
 ### Logitech F710 joystick jogging
 
-Install the ROS joystick driver before building:
+Install pygame before building:
 
 ```bash
-sudo apt install ros-jazzy-joy
+sudo apt install python3-pygame
 ```
 
 Start the scene with Servo and the joystick interface enabled:
@@ -168,11 +168,44 @@ layer. The default mapping is:
 | Right stick vertical/horizontal | Y rotation/Z rotation |
 | D-pad vertical/horizontal | Z translation/X rotation |
 
-The F710 must be in the same input mode used when the scene is started. If the
-axes differ, inspect them with `ros2 topic echo /joy` and override the
-`axis_map` and `axis_invert` parameters on `joystick_jog`; the node refuses to
-produce non-zero motion for missing axes. Keep the dead-man requirement enabled
-when operating the real robot.
+The F710 must be in the same input mode used when the scene is started. The
+default is X mode. For D mode, add `joystick_mode:=D` to the launch command:
+
+```bash
+joystick_mode:=D
+```
+
+The X and D presets use the D-pad for Z translation and do not use the analog
+triggers as robot axes. If the driver exposes a different layout, inspect it
+with `ros2 topic echo /joy` and override `axis_map` and `axis_invert` on
+`joystick_jog`; the node refuses to produce non-zero motion for missing axes.
+Keep the dead-man requirement enabled when operating the real robot.
+
+### Mapping an F710 before jogging
+
+Use the direct pygame mapping utility first. It never publishes robot commands:
+
+```bash
+sudo apt install python3-pygame
+cd /path/to/FANUC_CRX_3iA/fanuc_cbf
+source /opt/ros/jazzy/setup.bash
+source install/local_setup.bash
+ros2 run fanuc_custom_tools joystick_jog
+```
+
+After the mapping is verified, stop the mapper and run the robot interface:
+
+```bash
+ros2 run fanuc_custom_tools joystick_jog
+```
+
+This uses the same direct `pygame.joystick` backend as the known-working
+interface, rather than ROS `joy` topic conversion. The full scene launch uses
+this backend automatically when `launch_joystick:=true`.
+
+Move one stick, trigger, or D-pad direction at a time. The terminal will print
+messages such as `AXIS 1: +0.000 -> -1.000`, `BUTTON 5: pressed`, and
+`HAT 0: (0, 0) -> (1, 0)`. Record the indices while testing. The mapping
 
 A common CBF test command is:
 

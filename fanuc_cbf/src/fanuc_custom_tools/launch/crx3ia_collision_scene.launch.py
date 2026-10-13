@@ -102,6 +102,7 @@ def servo_setup(context, *args, **kwargs):
             {
                 "servo_node": "/servo_node",
                 "planning_frame": LaunchConfiguration("goal_frame"),
+                "controller_mode": LaunchConfiguration("joystick_mode"),
                 "command_topic": PythonExpression([
                     "'/cbf_velocity_filter/input' if '",
                     LaunchConfiguration("launch_cbf"),
@@ -116,20 +117,12 @@ def servo_setup(context, *args, **kwargs):
         output="screen",
     )
     joystick_driver = Node(
-        package="joy",
-        executable="joy_node",
-        name="f710_joy",
-        parameters=[{"deadzone": 0.15, "autorepeat_rate": 50.0}],
-        condition=IfCondition(LaunchConfiguration("launch_joystick")),
-        output="screen",
-    )
-    joystick_jog = Node(
         package="fanuc_custom_tools",
         executable="joystick_jog",
+        name="f710_joystick_jog",
         parameters=[
             {
                 "servo_node": "/servo_node",
-                "joy_topic": "/joy",
                 "planning_frame": LaunchConfiguration("goal_frame"),
                 "command_topic": PythonExpression([
                     "'/cbf_velocity_filter/input' if '",
@@ -141,7 +134,7 @@ def servo_setup(context, *args, **kwargs):
         condition=IfCondition(LaunchConfiguration("launch_joystick")),
         output="screen",
     )
-    return [servo_node, cbf_filter, jog_panel, joystick_driver, joystick_jog]
+    return [servo_node, cbf_filter, jog_panel, joystick_driver]
 
 
 def ortho_views_setup(context, *args, **kwargs):
@@ -294,6 +287,7 @@ def generate_launch_description():
         DeclareLaunchArgument("goal_frame", default_value="world"),
         DeclareLaunchArgument("launch_servo", default_value="false"),
         DeclareLaunchArgument("launch_joystick", default_value="false"),
+        DeclareLaunchArgument("joystick_mode", default_value="X"),
         DeclareLaunchArgument("launch_ortho_views", default_value="false"),
         DeclareLaunchArgument("launch_cbf", default_value="true"),
         DeclareLaunchArgument("cbf_prediction_horizon", default_value="0.20"),

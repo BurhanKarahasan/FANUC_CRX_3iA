@@ -1,93 +1,109 @@
 #!/usr/bin/env python3
 
-"""Dead-man joystick interface for MoveIt Servo Cartesian jogging."""
+"""Direct pygame F710 interface feeding the existing MoveIt Servo safety path."""
+
+import os
 
 import rclpy
 from geometry_msgs.msg import TwistStamped
 from moveit_msgs.srv import ServoCommandType
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from sensor_msgs.msg import Joy
 from std_srvs.srv import SetBool
 
+try:
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    import pygame
+except ImportError as error:
+    pygame = None
+    PYGAME_IMPORT_ERROR = error
 
-class JoystickJogNode(Node):
-    """Convert a joystick stream into a collision-checked Servo twist stream."""
 
+class JoystickJog(Node):
     def __init__(self):
         super().__init__("joystick_jog")
-        self.declare_parameter("joy_topic", "/joy")
-        self.declare_parameter("command_topic", "/servo_node/delta_twist_cmds")
+        if pygame is None:
+            raise RuntimeError(
+                "pygame is required for direct F710 input; install python3-pygame"
+            ) from PYGAME_IMPORT_ERROR
+
         self.declare_parameter("servo_node", "/servo_node")
+        self.declare_parameter("command_topic", "/servo_node/delta_twist_cmds")
         self.declare_parameter("planning_frame", "world")
+        self.declare_parameter("device_index", 0)
         self.declare_parameter("publish_rate", 50.0)
-        self.declare_parameter("joy_timeout", 0.25)
-        self.declare_parameter("deadman_button", 5)
+        self.declare_parameter("deadzone", 0.08)
         self.declare_parameter("linear_speed", 0.05)
         self.declare_parameter("angular_speed", 0.30)
-        # Logitech F710 mappings in the default X-input/Linux joy layout. Every
-        # index and sign is a parameter because the controller changes its layout
-        # between X/D input modes and some joy drivers expose the triggers differently.
-        self.declare_parameter("axis_map", [1, 0, 5, 4, 3, 2])
-        self.declare_parameter("axis_invert", [True, False, False, False, True, False])
+        self.declare_parameter("deadman_button", 5)
 
         self.frame = str(self.get_parameter("planning_frame").value)
-        self.joy_timeout = float(self.get_parameter("joy_timeout").value)
-        self.deadman_button = int(self.get_parameter("deadman_button").value)
+        self.device_index = int(self.get_parameter("device_index").value)
+        self.deadzone = float(self.get_parameter("deadzone").value)
         self.linear_speed = float(self.get_parameter("linear_speed").value)
         self.angular_speed = float(self.get_parameter("angular_speed").value)
-        self.axis_map = [int(value) for value in self.get_parameter("axis_map").value]
-        self.axis_invert = [
-            bool(value) for value in self.get_parameter("axis_invert").value
-        ]
-        if len(self.axis_map) != 6 or len(self.axis_invert) != 6:
-            raise ValueError("axis_map and axis_invert must each contain six values")
-
+        self.deadman_button = int(self.get_parameter("deadman_button").value)
+        self.publisher = self.create_publisher(
+            TwistStamped, str(self.get_parameter("command_topic").value), 10
+        )
         servo = str(self.get_parameter("servo_node").value).rstrip("/")
-        command_topic = str(self.get_parameter("command_topic").value)
-        self.publisher = self.create_publisher(TwistStamped, command_topic, 10)
         self.switch_client = self.create_client(
             ServoCommandType, f"{servo}/switch_command_type"
         )
         self.pause_client = self.create_client(SetBool, f"{servo}/pause_servo")
-        self.create_subscription(
-            Joy, str(self.get_parameter("joy_topic").value), self._on_joy, 10
-        )
-        self.create_timer(
-            1.0 / float(self.get_parameter("publish_rate").value), self._publish
-        )
 
-        self.latest_joy = None
-        self.latest_joy_time = None
+        pygame.init()
+        pygame.joystick.init()
+        self.joystick = None
         self.twist_requested = False
         self.twist_ready = False
-        self.was_enabled = False
-        self.warned_axis = False
-
-    def _on_joy(self, message):
-        self.latest_joy = message
-        self.latest_joy_time = self.get_clock().now()
-
-    def _enabled(self):
-        if self.latest_joy is None or self.latest_joy_time is None:
-            return False
-        age = (self.get_clock().now() - self.latest_joy_time).nanoseconds / 1e9
-        if age > self.joy_timeout:
-            return False
-        return (
-            0 <= self.deadman_button < len(self.latest_joy.buttons)
-            and bool(self.latest_joy.buttons[self.deadman_button])
+        self.last_enabled = False
+        self.last_report = 0.0
+        self.create_timer(
+            1.0 / float(self.get_parameter("publish_rate").value), self._poll
         )
+        self.get_logger().info("Waiting for pygame joystick...")
+
+    def _connect(self):
+        count = pygame.joystick.get_count()
+        if count <= self.device_index:
+            self.joystick = None
+            return False
+        if self.joystick is None:
+            self.joystick = pygame.joystick.Joystick(self.device_index)
+            self.joystick.init()
+            self.get_logger().info(
+                f"Connected joystick {self.device_index}: {self.joystick.get_name()} "
+                f"({self.joystick.get_numaxes()} axes, "
+                f"{self.joystick.get_numbuttons()} buttons, "
+                f"{self.joystick.get_numhats()} hats)"
+            )
+        return True
+
+    def _value(self, value):
+        if abs(value) <= self.deadzone:
+            return 0.0
+        sign = 1.0 if value > 0.0 else -1.0
+        return sign * (abs(value) - self.deadzone) / (1.0 - self.deadzone)
 
     def _axis(self, index):
-        if index < 0 or index >= len(self.latest_joy.axes):
-            if not self.warned_axis:
-                self.get_logger().warning(
-                    "Joystick message does not contain all configured axes; "
-                    "publishing zero until the mapping is corrected."
-                )
-                self.warned_axis = True
+        if index >= self.joystick.get_numaxes():
             return 0.0
-        return float(self.latest_joy.axes[index])
+        return self._value(float(self.joystick.get_axis(index)))
+
+    def _publish_twist(self, values):
+        message = TwistStamped()
+        message.header.stamp = self.get_clock().now().to_msg()
+        message.header.frame_id = self.frame
+        (
+            message.twist.linear.x,
+            message.twist.linear.y,
+            message.twist.linear.z,
+            message.twist.angular.x,
+            message.twist.angular.y,
+            message.twist.angular.z,
+        ) = values
+        self.publisher.publish(message)
 
     def _request_twist_mode(self):
         if self.twist_requested or not self.switch_client.service_is_ready():
@@ -115,53 +131,69 @@ class JoystickJogNode(Node):
         if self.pause_client.service_is_ready():
             self.pause_client.call_async(SetBool.Request(data=False))
 
-    def _publish(self):
-        enabled = self._enabled()
-        if not enabled:
-            if self.was_enabled:
-                self._publish_twist((0.0,) * 6)
-            self.was_enabled = False
-            self.twist_requested = False
-            self.twist_ready = False
+    def _poll(self):
+        pygame.event.pump()
+        if not self._connect():
+            self._stop()
             return
 
-        self.was_enabled = True
+        deadman = (
+            self.deadman_button < self.joystick.get_numbuttons()
+            and bool(self.joystick.get_button(self.deadman_button))
+        )
+        if not deadman:
+            self._stop()
+            return
+
+        self.last_enabled = True
         self._request_twist_mode()
         if not self.twist_ready:
             self._publish_twist((0.0,) * 6)
             return
-        values = [
-            self._axis(index) * (-1.0 if invert else 1.0)
-            for index, invert in zip(self.axis_map, self.axis_invert)
-        ]
-        values[:3] = [value * self.linear_speed for value in values[:3]]
-        values[3:] = [value * self.angular_speed for value in values[3:]]
-        self._publish_twist(values)
 
-    def _publish_twist(self, values):
-        message = TwistStamped()
-        message.header.stamp = self.get_clock().now().to_msg()
-        message.header.frame_id = self.frame
-        (
-            message.twist.linear.x,
-            message.twist.linear.y,
-            message.twist.linear.z,
-            message.twist.angular.x,
-            message.twist.angular.y,
-            message.twist.angular.z,
-        ) = values
-        self.publisher.publish(message)
+        left_x = self._axis(0)
+        left_y = self._axis(1)
+        right_x = self._axis(2)
+        right_y = self._axis(3)
+        left_trigger = (self._axis(4) + 1.0) * 0.5
+        right_trigger = (self._axis(5) + 1.0) * 0.5
+        dpad_x, dpad_y = (0.0, 0.0)
+        if self.joystick.get_numhats():
+            dpad_x, dpad_y = self.joystick.get_hat(0)
+
+        self._publish_twist(
+            (
+                -left_y * self.linear_speed,
+                -left_x * self.linear_speed,
+                -right_y * self.linear_speed,
+                (right_trigger - left_trigger) * self.angular_speed,
+                dpad_y * self.angular_speed,
+                -right_x * self.angular_speed,
+            )
+        )
+
+    def _stop(self):
+        if self.last_enabled:
+            self._publish_twist((0.0,) * 6)
+        self.last_enabled = False
+        self.twist_requested = False
+        self.twist_ready = False
+
+    def close(self):
+        self._stop()
+        pygame.quit()
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = JoystickJogNode()
+    node = JoystickJog()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        node._publish_twist((0.0,) * 6)
+        if rclpy.ok():
+            node.close()
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
