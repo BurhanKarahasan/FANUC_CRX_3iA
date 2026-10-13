@@ -183,7 +183,8 @@ Keep the dead-man requirement enabled when operating the real robot.
 
 ### Mapping an F710 before jogging
 
-Use the direct pygame mapping utility first. It never publishes robot commands:
+The jog node uses the same direct pygame joystick backend as the known-working
+interface:
 
 ```bash
 sudo apt install python3-pygame
@@ -193,19 +194,9 @@ source install/local_setup.bash
 ros2 run fanuc_custom_tools joystick_jog
 ```
 
-After the mapping is verified, stop the mapper and run the robot interface:
-
-```bash
-ros2 run fanuc_custom_tools joystick_jog
-```
-
 This uses the same direct `pygame.joystick` backend as the known-working
 interface, rather than ROS `joy` topic conversion. The full scene launch uses
 this backend automatically when `launch_joystick:=true`.
-
-Move one stick, trigger, or D-pad direction at a time. The terminal will print
-messages such as `AXIS 1: +0.000 -> -1.000`, `BUTTON 5: pressed`, and
-`HAT 0: (0, 0) -> (1, 0)`. Record the indices while testing. The mapping
 
 A common CBF test command is:
 
