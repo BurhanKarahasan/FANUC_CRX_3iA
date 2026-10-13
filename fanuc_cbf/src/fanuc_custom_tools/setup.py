@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = "fanuc_scene_tools"
+package_name = "fanuc_custom_tools"
 
 setup(
     name=package_name,
@@ -20,8 +20,8 @@ setup(
     zip_safe=True,
     entry_points={
         "console_scripts": [
-            "collision_scene_publisher = fanuc_scene_tools.collision_scene_publisher:main",
-            "workspace_boundary_sweep = fanuc_scene_tools.workspace_boundary_sweep:main",
+            "collision_scene_publisher = fanuc_custom_tools.collision_scene_publisher:main",
+            "workspace_boundary_sweep = fanuc_custom_tools.workspace_boundary_sweep:main",
         ],
     },
 )

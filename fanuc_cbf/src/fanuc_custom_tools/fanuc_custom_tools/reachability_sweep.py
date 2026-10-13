@@ -167,7 +167,7 @@ class ReachabilitySweep(Node):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mesh", default="src/fanuc_scene_tools/assets/KUBTEC_workspace_20cm.stl")
+    parser.add_argument("--mesh", default="src/fanuc_custom_tools/assets/KUBTEC_workspace_20cm.stl")
     parser.add_argument("--mesh-scale", type=float, default=0.001)
     parser.add_argument("--workspace-x", type=float, default=-0.20)
     parser.add_argument("--workspace-y", type=float, default=-0.35)

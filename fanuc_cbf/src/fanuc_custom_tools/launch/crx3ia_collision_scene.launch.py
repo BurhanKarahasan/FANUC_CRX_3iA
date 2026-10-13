@@ -61,7 +61,7 @@ def servo_setup(context, *args, **kwargs):
     with open(os.path.join(moveit_share, "config", "kinematics.yaml")) as handle:
         kinematics = yaml.safe_load(handle)
     with open(os.path.join(
-        get_package_share_directory("fanuc_scene_tools"),
+        get_package_share_directory("fanuc_custom_tools"),
         "config", "servo_crx3ia.yaml",
     )) as handle:
         servo_settings = yaml.safe_load(handle)
@@ -79,7 +79,7 @@ def servo_setup(context, *args, **kwargs):
         output="screen",
     )
     cbf_filter = Node(
-        package="fanuc_scene_tools",
+        package="fanuc_custom_tools",
         executable="cbf_velocity_filter",
         parameters=[
             {
@@ -96,7 +96,7 @@ def servo_setup(context, *args, **kwargs):
         output="screen",
     )
     jog_panel = Node(
-        package="fanuc_scene_tools",
+        package="fanuc_custom_tools",
         executable="cartesian_jog_panel",
         parameters=[
             {
@@ -132,7 +132,7 @@ def ortho_views_setup(context, *args, **kwargs):
     ) != "true":
         return []
 
-    share = get_package_share_directory("fanuc_scene_tools")
+    share = get_package_share_directory("fanuc_custom_tools")
     nodes = []
     # view_xz: Z along -Y_world, so the screen shows world X right and Z up.
     # view_yz: Z along +X_world, so the screen shows world Y right and Z up.
@@ -159,7 +159,7 @@ def ortho_views_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    share = FindPackageShare("fanuc_scene_tools")
+    share = FindPackageShare("fanuc_custom_tools")
     workspace_mesh = PathJoinSubstitution([share, "assets", "KUBTEC_workspace_10cm.stl"])
     stepper_mesh = PythonExpression([
         "'", PathJoinSubstitution([share, "assets", "stepper_motor.stl"]),
@@ -180,7 +180,7 @@ def generate_launch_description():
         }.items(),
     )
     scene_publisher = Node(
-        package="fanuc_scene_tools",
+        package="fanuc_custom_tools",
         executable="collision_scene_publisher",
         parameters=[
             {
@@ -221,7 +221,7 @@ def generate_launch_description():
         output="screen",
     )
     goal_panel = Node(
-        package="fanuc_scene_tools",
+        package="fanuc_custom_tools",
         executable="cartesian_goal_panel",
         parameters=[
             {

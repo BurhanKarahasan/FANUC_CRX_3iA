@@ -126,7 +126,7 @@ class Field:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--field", default="reachability_field.csv")
-    parser.add_argument("--mesh", default="src/fanuc_scene_tools/assets/KUBTEC_workspace_20cm.stl")
+    parser.add_argument("--mesh", default="src/fanuc_custom_tools/assets/KUBTEC_workspace_20cm.stl")
     parser.add_argument("--mesh-scale", type=float, default=0.001)
     parser.add_argument("--step", type=float, default=0.05)
     parser.add_argument("--top", type=int, default=12)

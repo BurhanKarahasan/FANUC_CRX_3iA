@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>fanuc_scene_tools</name>
+  <name>fanuc_custom_tools</name>
   <version>0.1.0</version>
   <description>MoveIt collision objects for the FANUC CRX simulation.</description>
   <maintainer email="user@example.com">user</maintainer>

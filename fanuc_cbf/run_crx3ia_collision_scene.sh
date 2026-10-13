@@ -7,4 +7,4 @@ source /opt/ros/jazzy/setup.bash
 source "$(dirname "${BASH_SOURCE[0]}")/install/local_setup.bash"
 
 export QT_QPA_PLATFORM=xcb
-exec ros2 launch fanuc_scene_tools crx3ia_collision_scene.launch.py "$@"
+exec ros2 launch fanuc_custom_tools crx3ia_collision_scene.launch.py "$@"

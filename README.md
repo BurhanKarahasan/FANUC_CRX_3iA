@@ -14,10 +14,9 @@ scripts or `ros2 run` are run from `fanuc_cbf/` unless stated otherwise.
 
 - `fanuc_cbf/`: active workspace and the single set of current build/run
   scripts.
-- `fanuc_crx_ros2/`: earlier driver-oriented source snapshot retained for
-  comparison.
-- `official_fanuc_ws/`: historical/reference source snapshot retained for
-  comparison.
+- `fanuc_custom_tools/`: project-owned collision, Servo, CBF, panel, and
+  analysis code. This name intentionally distinguishes modified code from
+  the official FANUC source trees.
 - `killer.sh`: utility for stopping local ROS, Gazebo, and RViz processes.
 
 The active source tree combines the official FANUC repositories:
@@ -25,7 +24,7 @@ The active source tree combines the official FANUC repositories:
 - `fanuc_cbf/src/fanuc_driver/`: driver, hardware interface, controllers,
   MoveIt configuration, messages, RMI examples, and libraries.
 - `fanuc_cbf/src/fanuc_description/`: official robot descriptions and meshes.
-- `fanuc_cbf/src/fanuc_scene_tools/`: collision scene, CBF, Servo, panels,
+- `fanuc_cbf/src/fanuc_custom_tools/`: collision scene, CBF, Servo, panels,
   launch files, and reachability/placement tools.
 
 ## Contents
@@ -33,18 +32,18 @@ The active source tree combines the official FANUC repositories:
 Important source locations:
 
 - `src/fanuc_driver/`: FANUC descriptions, mock hardware, controllers, and MoveIt configuration.
-- `src/fanuc_scene_tools/launch/crx3ia_collision_scene.launch.py`: main combined launch file.
-- `src/fanuc_scene_tools/config/servo_crx3ia.yaml`: MoveIt Servo configuration.
-- `src/fanuc_scene_tools/fanuc_scene_tools/cbf_velocity_filter.py`: optional predictive collision filter.
-- `src/fanuc_scene_tools/fanuc_scene_tools/collision_scene_publisher.py`: workspace and attached-tool collision objects.
-- `src/fanuc_scene_tools/fanuc_scene_tools/cartesian_jog_panel.py`: hold-to-jog Cartesian and joint jog GUI.
-- `src/fanuc_scene_tools/fanuc_scene_tools/cartesian_goal_panel.py`: TCP goal, IK, planning, execution, and scene GUI.
-- `src/fanuc_scene_tools/assets/KUBTEC_workspace_10cm.stl`: workspace collision/visualization mesh.
-- `src/fanuc_scene_tools/assets/KUBTEC_workspace_20cm.stl`: larger workspace mesh for analysis tools.
-- `src/fanuc_scene_tools/assets/stepper_motor.stl`: attached tool/stepper collision mesh.
+- `src/fanuc_custom_tools/launch/crx3ia_collision_scene.launch.py`: main combined launch file.
+- `src/fanuc_custom_tools/config/servo_crx3ia.yaml`: MoveIt Servo configuration.
+- `src/fanuc_custom_tools/fanuc_custom_tools/cbf_velocity_filter.py`: optional predictive collision filter.
+- `src/fanuc_custom_tools/fanuc_custom_tools/collision_scene_publisher.py`: workspace and attached-tool collision objects.
+- `src/fanuc_custom_tools/fanuc_custom_tools/cartesian_jog_panel.py`: hold-to-jog Cartesian and joint jog GUI.
+- `src/fanuc_custom_tools/fanuc_custom_tools/cartesian_goal_panel.py`: TCP goal, IK, planning, execution, and scene GUI.
+- `src/fanuc_custom_tools/assets/KUBTEC_workspace_10cm.stl`: workspace collision/visualization mesh.
+- `src/fanuc_custom_tools/assets/KUBTEC_workspace_20cm.stl`: larger workspace mesh for analysis tools.
+- `src/fanuc_custom_tools/assets/stepper_motor.stl`: attached tool/stepper collision mesh.
 
 The tool and collision objects are already included in the repository under
-`fanuc_cbf/src/fanuc_scene_tools/assets/`. STL source dimensions are assumed
+`fanuc_cbf/src/fanuc_custom_tools/assets/`. STL source dimensions are assumed
 to be millimetres and the default launch scale is `0.001`, converting them to
 metres.
 
@@ -89,15 +88,15 @@ For a small source-only change:
 ```bash
 cd /path/to/FANUC_CRX_3iA/fanuc_cbf
 source /opt/ros/jazzy/setup.bash
-colcon build --packages-select fanuc_scene_tools --symlink-install
+colcon build --packages-select fanuc_custom_tools --symlink-install
 source install/local_setup.bash
 ```
 
 If a copied workspace reports that `CMakeCache.txt` belongs to another directory, remove only the affected generated package cache and rebuild:
 
 ```bash
-rm -rf build/fanuc_scene_tools
-colcon build --packages-select fanuc_scene_tools --symlink-install
+rm -rf build/fanuc_custom_tools
+colcon build --packages-select fanuc_custom_tools --symlink-install
 ```
 
 ## Main Collision Scene
@@ -329,7 +328,7 @@ The workspace mesh is treated as a solid object. A mesh that describes an occupi
 ## Servo Collision Scaling
 
 Current settings are in
-`fanuc_cbf/src/fanuc_scene_tools/config/servo_crx3ia.yaml`:
+`fanuc_cbf/src/fanuc_custom_tools/config/servo_crx3ia.yaml`:
 
 ```yaml
 check_collisions: true
@@ -426,12 +425,12 @@ The exact Servo factors are computed internally and are not exposed as a single 
 The package also contains these executable tools:
 
 ```bash
-ros2 run fanuc_scene_tools workspace_boundary_sweep --help
-ros2 run fanuc_scene_tools reachability_sweep --help
-ros2 run fanuc_scene_tools orientation_access_volume --help
-ros2 run fanuc_scene_tools placement_optimizer --help
-ros2 run fanuc_scene_tools task_reachability_atlas --help
-ros2 run fanuc_scene_tools render_workspace_map --help
+ros2 run fanuc_custom_tools workspace_boundary_sweep --help
+ros2 run fanuc_custom_tools reachability_sweep --help
+ros2 run fanuc_custom_tools orientation_access_volume --help
+ros2 run fanuc_custom_tools placement_optimizer --help
+ros2 run fanuc_custom_tools task_reachability_atlas --help
+ros2 run fanuc_custom_tools render_workspace_map --help
 ```
 
 Their purpose is:
@@ -452,13 +451,13 @@ List installed package executables:
 ```bash
 source /opt/ros/jazzy/setup.bash
 source install/local_setup.bash
-ros2 pkg executables fanuc_scene_tools
+ros2 pkg executables fanuc_custom_tools
 ```
 
 List launch arguments:
 
 ```bash
-ros2 launch fanuc_scene_tools crx3ia_collision_scene.launch.py --show-args
+ros2 launch fanuc_custom_tools crx3ia_collision_scene.launch.py --show-args
 ```
 
 Inspect active topics:
@@ -503,9 +502,9 @@ manual conflict-resolution exercise.
 | --- | --- | --- |
 | `fanuc_driver` | FANUC official repository | Do not edit in the custom layer. Track an upstream commit or tag. |
 | `fanuc_description` | FANUC official repository | Do not edit meshes, URDF/Xacro, or package metadata in the custom layer. |
-| `fanuc_scene_tools` | This project | Keep custom collision scene, CBF, Servo panels, and analysis code here. |
+| `fanuc_custom_tools` | This project | Keep custom collision scene, CBF, Servo panels, and analysis code here. |
 | Custom launch/config package | This project | Add integration launch files and YAML overrides here instead of modifying official launch files. |
-| `fanuc_crx_ros2/` and `official_fanuc_ws/` | Historical snapshots | Do not use as active upstream sources or merge targets. |
+| Removed historical workspaces | Removed | Gazebo, legacy robot models, and duplicate source snapshots are out of scope. |
 
 The current layout under `fanuc_cbf/src/fanuc_driver` and
 `fanuc_cbf/src/fanuc_description` is retained intact for now. The official
@@ -513,6 +512,12 @@ repositories and exact revisions are recorded in
 [`fanuc_cbf/fanuc_official.repos`](fanuc_cbf/fanuc_official.repos) so a clean
 workspace can reproduce the same combined source tree. Custom code must not be
 hidden inside those official directories.
+
+The project-owned package is named `fanuc_custom_tools`, not
+`fanuc_scene_tools`, to make the ownership boundary visible in the filesystem,
+ROS package index, launch files, and run scripts. Keep official updates inside
+the official package directories and keep project changes inside
+`fanuc_custom_tools`; do not copy custom files over an official checkout.
 
 To create an equivalent clean workspace without changing this checkout:
 
@@ -523,7 +528,7 @@ vcs import < ~/FANUC_CRX_3iA/fanuc_cbf/fanuc_official.repos
 ```
 
 The existing `fanuc_cbf` checkout is not removed or overwritten by this
-command. Its project-owned packages remain alongside the official packages.
+command. Its project-owned package remains alongside the official packages.
 
 ### Keep as the active runtime
 
@@ -542,7 +547,7 @@ rmi_msgs
 Keep custom behavior in project-owned packages:
 
 ```text
-fanuc_scene_tools
+fanuc_custom_tools
 fanuc_custom_bringup              # proposed integration package
 fanuc_analysis_tools              # proposed optional analysis package
 ```
@@ -577,7 +582,7 @@ launch, plugin, and README references before deletion:
 | RMI example | Official `fanuc_driver` examples | Keep for physical FANUC RMI development; exclude from simulation-only builds. |
 | Slider publisher | Official `fanuc_driver` package | Exclude or archive if no current launch uses it. |
 | Analysis tools | Proposed `fanuc_analysis_tools` | Move out of runtime scene bringup; retain as an optional project-owned package. |
-| Historical workspaces | `fanuc_crx_ros2/`, `official_fanuc_ws/` | Remove after official repositories are checked out reproducibly and unique files are accounted for. |
+| Historical workspaces | Removed | Gazebo and non-CRX robot models were intentionally excluded from the supported scope. |
 
 ### Official update workflow
 
@@ -639,12 +644,12 @@ manifest while all existing snapshots are preserved.
 ## Reproducibility Checklist For A New Computer
 
 1. Copy the complete `fanuc_cbf` workspace, including `src/fanuc_driver` and
-   `src/fanuc_scene_tools/assets`.
+   `src/fanuc_custom_tools/assets`.
 2. Install ROS 2 Jazzy, MoveIt, Xacro, TF2, and Tk dependencies.
 3. Run `source /opt/ros/jazzy/setup.bash`.
 4. Run `./build_workspace.sh` from the workspace root.
 5. Run `source install/local_setup.bash` in every new terminal before ROS commands.
-6. Verify `ros2 pkg executables fanuc_scene_tools` lists `cbf_velocity_filter`, `collision_scene_publisher`, `cartesian_jog_panel`, and `cartesian_goal_panel`.
+6. Verify `ros2 pkg executables fanuc_custom_tools` lists `cbf_velocity_filter`, `collision_scene_publisher`, `cartesian_jog_panel`, and `cartesian_goal_panel`.
 7. Start with `launch_cbf:=false` to validate native Servo.
 8. Add the TCP and tool geometry arguments.
 9. Enable `launch_cbf:=true` only after the native scene and TCP frames are correct.

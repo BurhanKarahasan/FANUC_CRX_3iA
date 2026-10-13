@@ -9,4 +9,4 @@ source /opt/ros/jazzy/setup.bash
 source "$(dirname "${BASH_SOURCE[0]}")/install/local_setup.bash"
 
 export QT_QPA_PLATFORM=xcb
-exec ros2 run fanuc_scene_tools cartesian_goal_panel "$@"
+exec ros2 run fanuc_custom_tools cartesian_goal_panel "$@"
