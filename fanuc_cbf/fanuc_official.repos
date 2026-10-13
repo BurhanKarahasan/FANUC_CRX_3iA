@@ -1,0 +1,11 @@
+repositories:
+  fanuc_driver:
+    type: git
+    url: https://github.com/FANUC-CORPORATION/fanuc_driver.git
+    version: da5db3f611cdc9dffe687e056c4e79bea584bf5c
+    path: src/fanuc_driver
+  fanuc_description:
+    type: git
+    url: https://github.com/FANUC-CORPORATION/fanuc_description.git
+    version: fb40c9803a826ba68c7c8e28ba904a25efa7fcd2
+    path: src/fanuc_description

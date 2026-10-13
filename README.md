@@ -489,6 +489,153 @@ Typical status meanings:
 - `slowing - approaching singularity`: change posture or approach orientation; collision tolerances will not fix it.
 - `at a joint limit`: increase joint-limit clearance or choose another IK branch/posture.
 
+## Upstream-first merge and purge plan
+
+The repository will follow an upstream-first model. The official FANUC source
+must remain updateable and unmodified; custom functionality belongs in
+separate packages that depend on, configure, or extend the official packages.
+This makes an official FANUC update a normal upstream merge rather than a
+manual conflict-resolution exercise.
+
+### Source ownership
+
+| Source | Owner | Rule |
+| --- | --- | --- |
+| `fanuc_driver` | FANUC official repository | Do not edit in the custom layer. Track an upstream commit or tag. |
+| `fanuc_description` | FANUC official repository | Do not edit meshes, URDF/Xacro, or package metadata in the custom layer. |
+| `fanuc_scene_tools` | This project | Keep custom collision scene, CBF, Servo panels, and analysis code here. |
+| Custom launch/config package | This project | Add integration launch files and YAML overrides here instead of modifying official launch files. |
+| `fanuc_crx_ros2/` and `official_fanuc_ws/` | Historical snapshots | Do not use as active upstream sources or merge targets. |
+
+The current layout under `fanuc_cbf/src/fanuc_driver` and
+`fanuc_cbf/src/fanuc_description` is retained intact for now. The official
+repositories and exact revisions are recorded in
+[`fanuc_cbf/fanuc_official.repos`](fanuc_cbf/fanuc_official.repos) so a clean
+workspace can reproduce the same combined source tree. Custom code must not be
+hidden inside those official directories.
+
+To create an equivalent clean workspace without changing this checkout:
+
+```bash
+mkdir -p /tmp/fanuc_official_check/src
+cd /tmp/fanuc_official_check
+vcs import < ~/FANUC_CRX_3iA/fanuc_cbf/fanuc_official.repos
+```
+
+The existing `fanuc_cbf` checkout is not removed or overwritten by this
+command. Its project-owned packages remain alongside the official packages.
+
+### Keep as the active runtime
+
+Use the official packages as the runtime foundation:
+
+```text
+fanuc_crx_description
+fanuc_hardware_interface
+fanuc_controllers
+fanuc_libs
+fanuc_moveit_config
+fanuc_msgs
+rmi_msgs
+```
+
+Keep custom behavior in project-owned packages:
+
+```text
+fanuc_scene_tools
+fanuc_custom_bringup              # proposed integration package
+fanuc_analysis_tools              # proposed optional analysis package
+```
+
+`fanuc_custom_bringup` should include the CRX-3iA scene launch, custom
+parameter files, RViz configurations, and composition of official launch
+files. It should include the official MoveIt launch rather than copying and
+modifying it.
+
+Keep the separate scene-tool responsibilities:
+
+```text
+collision_scene_publisher.py  -> publishes collision geometry
+cbf_velocity_filter.py        -> filters velocity commands
+cartesian_jog_panel.py        -> sends Servo jog commands
+cartesian_goal_panel.py       -> sends MoveIt Cartesian goals
+```
+
+These are related but not redundant. They wrap official MoveIt/Servo APIs and
+should not be merged into the official driver or description packages.
+
+### Review before removal or archiving
+
+The following are optional or historical and must be checked against package,
+launch, plugin, and README references before deletion:
+
+| Area | Current location | Proposed action |
+| --- | --- | --- |
+| Non-CRX robot descriptions | Official `fanuc_description` checkout | Keep only models required by the supported product scope; prune through upstream checkout selection, never by editing official files. |
+| Forward-command demo | Official `fanuc_driver` package | Keep only if direct position-command testing is required; do not fork it for a custom demo. |
+| Dual-arm example | Official `fanuc_driver` examples | Archive from the active build with package selection if dual-arm work is out of scope. |
+| RMI example | Official `fanuc_driver` examples | Keep for physical FANUC RMI development; exclude from simulation-only builds. |
+| Slider publisher | Official `fanuc_driver` package | Exclude or archive if no current launch uses it. |
+| Analysis tools | Proposed `fanuc_analysis_tools` | Move out of runtime scene bringup; retain as an optional project-owned package. |
+| Historical workspaces | `fanuc_crx_ros2/`, `official_fanuc_ws/` | Remove after official repositories are checked out reproducibly and unique files are accounted for. |
+
+### Official update workflow
+
+1. Update the official repository URLs and commit pins in
+   `fanuc_cbf/fanuc_official.repos`.
+2. Fetch a new official revision into a clean checkout; never update it by
+   copying over custom files.
+3. Build the official-only workspace first.
+4. Build the custom overlay on top of the official install space.
+5. Run the mock MoveIt, collision scene, Servo, controller registration, and
+   custom panel smoke tests.
+6. Review API, launch argument, plugin, controller, URDF, and frame changes.
+7. Update custom integration launch/configuration only where the official API
+   intentionally changed.
+8. Commit the official revision update separately from custom changes.
+
+The desired overlay order is:
+
+```text
+/opt/ros/jazzy
+        ↓
+official FANUC driver + description workspace
+        ↓
+project custom bringup + scene/CBF/panel/analysis packages
+```
+
+Do not source two historical FANUC workspaces together. Do not patch an
+official package in place to make a custom launch work; add a wrapper,
+parameter override, plugin, or custom package instead.
+
+### Execution order
+
+1. Create a Git checkpoint before destructive changes.
+2. Build a reference inventory of package dependencies, launch inclusions,
+   executable registrations, plugin XML files, controller names, robot models,
+   meshes, and YAML files.
+3. Classify every package and executable as `official-active`,
+   `custom-active`, `optional`, `historical`, or `unused`.
+4. Create the official checkout/lock manifest and prove it builds without
+   custom source modifications.
+5. Move custom integration launch/configuration into
+   `fanuc_custom_bringup`; move reachability and placement tools into
+   `fanuc_analysis_tools`.
+6. Exclude optional official examples and non-CRX descriptions through
+   workspace package selection before considering deletion.
+7. Rebuild and validate the reduced workspace:
+   mock MoveIt, collision scene, Servo without CBF, Servo with CBF, goal panel,
+   controller registration, and analysis command help.
+8. Test one official revision update in a clean checkout and repeat the
+   overlay validation.
+9. Keep all existing historical and duplicate files until a later, explicit
+   purge decision.
+10. Update this README's package and command lists after each merge.
+
+No files are removed by this merge step. The current repository remains
+buildable, and the official/custom boundary is now represented by a pinned
+manifest while all existing snapshots are preserved.
+
 ## Reproducibility Checklist For A New Computer
 
 1. Copy the complete `fanuc_cbf` workspace, including `src/fanuc_driver` and
