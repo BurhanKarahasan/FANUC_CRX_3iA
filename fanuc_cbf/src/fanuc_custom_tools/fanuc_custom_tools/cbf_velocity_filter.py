@@ -119,6 +119,7 @@ class DirectionAwareVelocityFilter(Node):
         self.candidate_index = 0
         self.request_pending = False
         self.escape_mode = False
+        self.last_collision_signature = None
 
         self.output = self.create_publisher(
             TwistStamped, self.get_parameter("output_topic").value, 10
@@ -269,8 +270,22 @@ class DirectionAwareVelocityFilter(Node):
             self._publish_fraction(0.0)
             return
         if response.valid:
+            self.last_collision_signature = None
             self._publish_fraction(self.candidates[self.candidate_index][0])
             return
+        pairs = sorted(
+            {
+                f"{contact.contact_body_1}<->{contact.contact_body_2}"
+                for contact in response.contacts
+            }
+        )
+        signature = ";".join(pairs) or "collision without named contact"
+        if signature != self.last_collision_signature:
+            self.get_logger().warning(
+                "Rejected predicted state at fraction "
+                f"{self.candidates[self.candidate_index][0]:.2f}: {signature}"
+            )
+            self.last_collision_signature = signature
         self.candidate_index += 1
         self._check_next_candidate()
 

@@ -455,6 +455,10 @@ The filter is binary per candidate: a candidate is valid or invalid. It does not
 calculate a continuous distance-based scale or collision normal. MoveIt Servo
 remains the independent final collision and singularity safeguard.
 
+When a predicted candidate is rejected, the filter logs the contact pair, for
+example `kubtec_workspace<->stepper_motor`. This is useful when testing attached
+tool geometry with `servo_collision_checking:=false`.
+
 At `0.05 m/s`:
 
 - horizon `0.20 s` predicts about 10 mm of translation;
